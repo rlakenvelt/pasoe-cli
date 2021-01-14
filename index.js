@@ -19,23 +19,15 @@ const options = yargs
 
 const baseUrl = `http://${options.host}:${options.port}/oemanager/applications/${options.name}`
 
-if (options.query) {
-    let agents;
-    let sessions;
-    Promise.all([
-        getAgents()
-        .then(response => {
-            agents = columnify(response);
-        }),
-        getSessions('fS2xfn5NS76QjUBnp1wC1w')
-        .then(response => {
-            sessions = columnify(response);
-        })
-    ])
-    .then((values) => {
-        console.log(chalk.yellow.bold('\nAGENTS\n'), agents);
-        console.log(chalk.yellow('\nSESSIONS\n'), sessions);
+if (options.trim > 0) {
+    getStatus()
+    .then(status => {
+        console.log(status);
+        // showStatus();
       });
+} else
+if (options.query) {
+    showStatus();
 }
 
 function getAgents() {
@@ -44,7 +36,7 @@ function getAgents() {
             return response.data.result.agents;
         })
         .catch(error => {
-            console.log('GetAgents: Error on Authentication');
+            console.log('GetAgents: Error');
         });
 }
 
@@ -60,9 +52,32 @@ function getSessions(agentId) {
             }
         })
         .catch(function(error) {
-            console.log('GetSessions: Error on Authentication');
+            console.log('GetSessions: Error');
         });
 }
+function deleteSession(sessionId) {
+    const url = `${baseUrl}/sessions?sessionID=${sessionId}&terminateOpt=0`;
+    return axios.delete(url, { headers: { Authorization: `Basic ${getToken()}` } })
+        .then(function(response) {
+            console.log(`SESSION ${sessionId} DELETED`);
+        })
+        .catch(function(error) {
+            console.log('Delete Session: Error');
+        });
+}
+async function getStatus() {
+    let agents = await getAgents().then(response => {return response});
+    let sessions = await getSessions(agents[0].agentId).then(response => {return response});
+    return {agents: agents, sessions: sessions};
+}
+function showStatus() {
+    getStatus()
+    .then(status => {
+        console.log(chalk.yellow.bold('\nAGENTS\n'), columnify(status.agents));
+        console.log(chalk.yellow('\nSESSIONS\n'), columnify(status.sessions));
+      });
+}
+
 function getToken() {
     return Buffer.from(`${options.user}`).toString('base64');
 }
