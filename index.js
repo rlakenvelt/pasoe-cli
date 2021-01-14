@@ -17,33 +17,50 @@ const options = yargs
             .argv;
 
 
-const baseUrl = `http://${options.host}:${options.port}/oemanager/applications/${options.name}/`
+const baseUrl = `http://${options.host}:${options.port}/oemanager/applications/${options.name}`
 
 if (options.query) {
-    getAgents()
-    .then(function(response) {
-        console.log(columnify(response));
-    });
+    let agents;
+    let sessions;
+    Promise.all([
+        getAgents()
+        .then(response => {
+            agents = columnify(response);
+        }),
+        getSessions('fS2xfn5NS76QjUBnp1wC1w')
+        .then(response => {
+            sessions = columnify(response);
+        })
+    ])
+    .then((values) => {
+        console.log(chalk.yellow.bold('\nAGENTS\n'), agents);
+        console.log(chalk.yellow('\nSESSIONS\n'), sessions);
+      });
 }
 
 function getAgents() {
-    return axios.get(baseUrl + 'agents', { headers: { Authorization: `Basic ${getToken()}` } })
-        .then(function(response) {
+    return axios.get(baseUrl + '/agents', { headers: { Authorization: `Basic ${getToken()}` } })
+        .then(response => {
             return response.data.result.agents;
         })
-        .catch(function(error) {
-            console.log('GetAgents: Error on Authentication', error.toJSON());
+        .catch(error => {
+            console.log('GetAgents: Error on Authentication');
         });
 }
 
-function getSessions() {
-    return axios.get(baseUrl + 'sessions', { headers: { Authorization: `Basic ${getToken()}` } })
+function getSessions(agentId) {
+    const url = (agentId ? `${baseUrl}/agents/${agentId}/sessions` : `${baseUrl}/agents`);
+    return axios.get(url, { headers: { Authorization: `Basic ${getToken()}` } })
         .then(function(response) {
-            console.log(response.data);
-            return response.data.result.OEABLSession;
+            if (response.data.result.AgentSession) {
+                return response.data.result.AgentSession;
+            }
+            else {
+                return response.data.result.OEABLSession;
+            }
         })
         .catch(function(error) {
-            console.log('GetSessions: Error on Authentication', error.toJSON());
+            console.log('GetSessions: Error on Authentication');
         });
 }
 function getToken() {

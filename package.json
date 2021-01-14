@@ -2,15 +2,15 @@
   "name": "cli-pasoe",
   "version": "1.0.0",
   "description": "",
-  "main": "bin/index.js",
+  "main": "index.js",
   "bin": {
-    "pasoeman": "./bin/index.js"
+    "pasoeman": "index.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
+  "author": "Roel Lakenvelt",
   "license": "ISC",
   "dependencies": {
     "axios": "^0.21.1",
