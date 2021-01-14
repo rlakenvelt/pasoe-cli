@@ -1,5 +1,5 @@
 {
-  "name": "cli-pasoe",
+  "name": "pasoe-cli",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -11,7 +11,7 @@
   },
   "keywords": [],
   "author": "Roel Lakenvelt",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "axios": "^0.21.1",
     "chalk": "^4.1.0",
