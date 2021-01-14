@@ -22,7 +22,7 @@ const baseUrl = `http://${options.host}:${options.port}/oemanager/applications/$
 if (options.trim > 0) {
     getStatus()
     .then(status => {
-        console.log(status);
+        deleteSessions(status.agents[0].agentId, status.sessions);
         // showStatus();
       });
 } else
@@ -55,8 +55,17 @@ function getSessions(agentId) {
             console.log('GetSessions: Error');
         });
 }
-function deleteSession(sessionId) {
-    const url = `${baseUrl}/sessions?sessionID=${sessionId}&terminateOpt=0`;
+function deleteSessions(agent, sessions) {
+    console.log(sessions);
+    const promises = [];
+    sessions.forEach(session=> {
+        promises.push(deleteSession(agent, session.SessionId));
+    })
+    Promise.all(promises).then(res => console.log(res));
+}
+function deleteSession(agentId, sessionId) {
+    const url = `${baseUrl}/agents/${agentId}/sessions/${sessionId}`;
+    console.log(url);
     return axios.delete(url, { headers: { Authorization: `Basic ${getToken()}` } })
         .then(function(response) {
             console.log(`SESSION ${sessionId} DELETED`);
