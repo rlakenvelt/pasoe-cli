@@ -12,26 +12,22 @@ const options = yargs
             .option("u", { alias: "user", describe: "User", type: "string", default: "tomcat:tomcat", demandOption: true })
             .option("p", { alias: "port", describe: "Port", type: "number", default: "45001", demandOption: true })
             .option("q", { alias: "query", describe: "Query", type: "boolean", demandOption: false })
-            .option("t", { alias: "trim", describe: "Trim Appserver agents back by", demandOption: false })
+            .option("trim", { alias: "t", describe: "Trim Appserver agents back by", type: "boolean", demandOption: false })
             .option("h", { alias: "host", describe: "Host name where Apperver is running", type: "string", default: "localhost", demandOption: true })
             .argv;
 
 
 const baseUrl = `http://${options.host}:${options.port}/oemanager/applications/${options.name}`
 
-if (options.trim > 0) {
-    getStatus()
-    .then(status => {
-        deleteSessions(status.agents[0].agentId, status.sessions);
-        // showStatus();
-      });
+if (options.trim) {
+    deleteAgents();
 } else
 if (options.query) {
     showStatus();
 }
 
 function getAgents() {
-    return axios.get(baseUrl + '/agents', { headers: { Authorization: `Basic ${getToken()}` } })
+    return axios.get(baseUrl + '/agents', getHttpOptions())
         .then(response => {
             return response.data.result.agents;
         })
@@ -39,10 +35,41 @@ function getAgents() {
             console.log('GetAgents: Error');
         });
 }
+async function deleteAgents() {
+    const promises = [];
+    let trimmed = 0;
+    await getAgents().then(agents => {
+        agents.forEach(agent=> {
+            promises.push(trimmed+=deleteAgent(agent.agentId));
+        })    
+    });
+    const numberOfAgents = promises.length;
+    if (numberOfAgents > 0) {
+        Promise.all(promises).then(res => {
+            console.log(`${trimmed} out of ${numberOfAgents} Agents trimmed`);
+        });
+    } else {
+        console.log(chalk.red('No agents found'));
+    }
+    
+}
+function deleteAgent(agentId) {
+    const url = `${baseUrl}/agents/${agentId}?waitToFinish=120000`;
+    console.log(url);
+    return axios.delete(url, getHttpOptions())
+        .then(function(response) {
+            console.log(`AGENT ${sessionId} DELETED`);
+            return 1;
+        })
+        .catch(function(error) {
+            console.log('Delete Agent: Error');
+            return 0;
+        });
+}
 
 function getSessions(agentId) {
     const url = (agentId ? `${baseUrl}/agents/${agentId}/sessions` : `${baseUrl}/agents`);
-    return axios.get(url, { headers: { Authorization: `Basic ${getToken()}` } })
+    return axios.get(url, getHttpOptions())
         .then(function(response) {
             if (response.data.result.AgentSession) {
                 return response.data.result.AgentSession;
@@ -66,7 +93,7 @@ function deleteSessions(agent, sessions) {
 function deleteSession(agentId, sessionId) {
     const url = `${baseUrl}/agents/${agentId}/sessions/${sessionId}`;
     console.log(url);
-    return axios.delete(url, { headers: { Authorization: `Basic ${getToken()}` } })
+    return axios.delete(url, getHttpOptions() )
         .then(function(response) {
             console.log(`SESSION ${sessionId} DELETED`);
         })
@@ -87,6 +114,6 @@ function showStatus() {
       });
 }
 
-function getToken() {
-    return Buffer.from(`${options.user}`).toString('base64');
+function getHttpOptions() {
+    return { headers: { Authorization: `Basic ${Buffer.from(`${options.user}`).toString('base64')}`, 'Content-Type': 'application/vnd.progress+json' } }
 }
