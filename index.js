@@ -32,7 +32,7 @@ function getAgents() {
             return response.data.result.agents;
         })
         .catch(error => {
-            console.log('GetAgents: Error');
+            // console.log(chalk.red('GetAgents: Error'));
         });
 }
 
@@ -48,7 +48,7 @@ function getSessions(agentId) {
             }
         })
         .catch(function(error) {
-            console.log('GetSessions: Error');
+            // console.log(chalk.red('GetSessions: Error'));
         });
 }
 
@@ -63,7 +63,13 @@ async function deleteAgents() {
     })
     Promise.all(promises)
         .then(res => {
-            console.log(`${res.length} agents trimmed`);
+            if (res.length === 0) {
+                console.log(' No agents trimmed');
+            }
+            else {
+                console.log(`${res.length} agent(s) trimmed`);
+                showStatus();
+            }
         });       
 }
 function deleteAgent(agentId) {
@@ -85,12 +91,11 @@ function showStatus() {
     getStatus()
     .then(status => {
         status.forEach(agent => {
-            console.log(chalk.yellow.bold('\nAGENT'));            
+            console.log(chalk.yellow('\nAGENT'));            
             console.log(columnify(agent.agent, {
                 showHeaders: false
               }));
             console.log('');  
-            // console.log(chalk.yellow.bold('\nSESSIONS'));            
             console.log(columnify(agent.sessions));
         });
       });
