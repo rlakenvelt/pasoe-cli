@@ -12,7 +12,7 @@ const options = yargs
             .option("u", { alias: "user", describe: "User", type: "string", default: "tomcat:tomcat", demandOption: true })
             .option("p", { alias: "port", describe: "Port", type: "number", default: "45001", demandOption: true })
             .option("q", { alias: "query", describe: "Query", type: "boolean", demandOption: false })
-            .option("trim", { alias: "t", describe: "Trim Appserver agents back by", type: "boolean", demandOption: false })
+            .option("t", { alias: "trim", describe: "Trim Appserver agents", type: "boolean", demandOption: false })
             .option("h", { alias: "host", describe: "Host name where Apperver is running", type: "string", default: "localhost", demandOption: true })
             .argv;
 
@@ -35,37 +35,6 @@ function getAgents() {
             console.log('GetAgents: Error');
         });
 }
-async function deleteAgents() {
-    const promises = [];
-    let trimmed = 0;
-    await getAgents().then(agents => {
-        agents.forEach(agent=> {
-            promises.push(trimmed+=deleteAgent(agent.agentId));
-        })    
-    });
-    const numberOfAgents = promises.length;
-    if (numberOfAgents > 0) {
-        Promise.all(promises).then(res => {
-            console.log(`${trimmed} out of ${numberOfAgents} Agents trimmed`);
-        });
-    } else {
-        console.log(chalk.red('No agents found'));
-    }
-    
-}
-function deleteAgent(agentId) {
-    const url = `${baseUrl}/agents/${agentId}?waitToFinish=120000`;
-    console.log(url);
-    return axios.delete(url, getHttpOptions())
-        .then(function(response) {
-            console.log(`AGENT ${sessionId} DELETED`);
-            return 1;
-        })
-        .catch(function(error) {
-            console.log('Delete Agent: Error');
-            return 0;
-        });
-}
 
 function getSessions(agentId) {
     const url = (agentId ? `${baseUrl}/agents/${agentId}/sessions` : `${baseUrl}/agents`);
@@ -82,39 +51,35 @@ function getSessions(agentId) {
             console.log('GetSessions: Error');
         });
 }
-function deleteSessions(agent, sessions) {
-    console.log(sessions);
+
+async function deleteAgents() {
+    let agents = await getAgents().then(response => {return response});
+    if (!agents || agents.length === 0) return [];
     const promises = [];
-    sessions.forEach(session=> {
-        promises.push(deleteSession(agent, session.SessionId));
+    
+    agents.forEach(agent=> {
+        promises.push(deleteAgent(agent.agentId)
+            .then(response => {return agent.agentId}));
     })
-    Promise.all(promises).then(res => console.log(res));
+    Promise.all(promises)
+        .then(res => {
+            console.log(`${res.length} agents trimmed`);
+        });       
 }
-function deleteSession(agentId, sessionId) {
-    const url = `${baseUrl}/agents/${agentId}/sessions/${sessionId}`;
-    console.log(url);
-    return axios.delete(url, getHttpOptions() )
-        .then(function(response) {
-            console.log(`SESSION ${sessionId} DELETED`);
-        })
-        .catch(function(error) {
-            console.log('Delete Session: Error');
-        });
+function deleteAgent(agentId) {
+    const url = `${baseUrl}/agents/${agentId}?waitToFinish=120000`;
+    return axios.delete(url, getHttpOptions());
 }
+
 async function getStatus() {
     let agents = await getAgents().then(response => {return response});
-    let sessions = [];
     if (!agents || agents.length === 0) return [];
     const promises = [];
     agents.forEach(agent=> {
         promises.push(getSessions(agent.agentId)
             .then(response => {return {agent, sessions: response}}));
     })
-    return Promise.all(promises)
-        .then(res => {
-            // console.log('YO', res);
-            return res;
-        });     
+    return Promise.all(promises);     
 }
 function showStatus() {
     getStatus()
@@ -124,7 +89,8 @@ function showStatus() {
             console.log(columnify(agent.agent, {
                 showHeaders: false
               }));
-            console.log(chalk.yellow.bold('\nSESSIONS'));            
+            console.log('');  
+            // console.log(chalk.yellow.bold('\nSESSIONS'));            
             console.log(columnify(agent.sessions));
         });
       });
