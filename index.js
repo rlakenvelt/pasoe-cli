@@ -103,14 +103,30 @@ function deleteSession(agentId, sessionId) {
 }
 async function getStatus() {
     let agents = await getAgents().then(response => {return response});
-    let sessions = await getSessions(agents[0].agentId).then(response => {return response});
-    return {agents: agents, sessions: sessions};
+    let sessions = [];
+    if (!agents || agents.length === 0) return [];
+    const promises = [];
+    agents.forEach(agent=> {
+        promises.push(getSessions(agent.agentId)
+            .then(response => {return {agent, sessions: response}}));
+    })
+    return Promise.all(promises)
+        .then(res => {
+            // console.log('YO', res);
+            return res;
+        });     
 }
 function showStatus() {
     getStatus()
     .then(status => {
-        console.log(chalk.yellow.bold('\nAGENTS\n'), columnify(status.agents));
-        console.log(chalk.yellow('\nSESSIONS\n'), columnify(status.sessions));
+        status.forEach(agent => {
+            console.log(chalk.yellow.bold('\nAGENT'));            
+            console.log(columnify(agent.agent, {
+                showHeaders: false
+              }));
+            console.log(chalk.yellow.bold('\nSESSIONS'));            
+            console.log(columnify(agent.sessions));
+        });
       });
 }
 
